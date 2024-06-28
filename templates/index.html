@@ -1,97 +1,100 @@
 <!DOCTYPE html>
-<html>
-  <head>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Digit Recognition</title>
-    <link
-      rel="stylesheet"
-      type="text/css"
-      href="{{ url_for('static', filename='css/styles.css') }}"
-    />
-    
-  </head>
-  <body>
-    <h1>Digit Recognition</h1>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        canvas {
+            border: 1px solid #000000;
+            cursor: crosshair;
+        }
+        #result {
+            font-size: 1.5em;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Digit Recognition App</h1>
     <button onclick="predict()">Predict</button>
+    <button onclick="clearCanvas()">Clear</button>
     <br />
-    <canvas
-      id="canvas"
-      width="280"
-      height="280"
-      style="border: 1px solid #000000"
-    ></canvas>
+    <canvas id="canvas" width="280" height="280"></canvas>
     <br />
-
     <p id="result"></p>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-      let canvas = document.getElementById("canvas");
-      let ctx = canvas.getContext("2d");
-      let isDrawing = false;
-
-      canvas.addEventListener("mousedown", () => {
-        isDrawing = true;
-      });
-      canvas.addEventListener("mouseup", () => {
-        isDrawing = false;
-        ctx.beginPath();
-      });
-      canvas.addEventListener("mousemove", draw);
-
-      function draw(event) {
-        if (!isDrawing) return;
-        ctx.lineWidth = 10;
-        ctx.lineCap = "round";
-        ctx.strokeStyle = "black";
-        ctx.lineTo(
-          event.clientX - canvas.offsetLeft,
-          event.clientY - canvas.offsetTop
-        );
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(
-          event.clientX - canvas.offsetLeft,
-          event.clientY - canvas.offsetTop
-        );
-      }
-
-      function predict() {
         let canvas = document.getElementById("canvas");
         let ctx = canvas.getContext("2d");
+        let isDrawing = false;
 
-        // Resize the canvas to 28x28 pixels
-        let resizedCanvas = document.createElement("canvas");
-        let resizedCtx = resizedCanvas.getContext("2d");
-        resizedCanvas.width = 28;
-        resizedCanvas.height = 28;
-        resizedCtx.drawImage(canvas, 0, 0, 28, 28);
-
-        // Get image data from the resized canvas
-        let imageData = resizedCtx.getImageData(0, 0, 28, 28);
-        let data = [];
-        for (let i = 0; i < imageData.data.length; i += 4) {
-          let avg =
-            (imageData.data[i] +
-              imageData.data[i + 1] +
-              imageData.data[i + 2]) /
-            3;
-          data.push(avg / 255.0);
-        }
-        // Check if the length of the data array matches the expected size (784)
-        if (data.length !== 784) {
-          console.error("Incorrect data size");
-          return;
-        }
-        $.ajax({
-          url: "/predict",
-          type: "POST",
-          contentType: "application/json",
-          data: JSON.stringify({ image: data }),
-          success: function (response) {
-            document.getElementById("result").innerText =
-              "Predicted Digit: " + response.prediction;
-          },
+        canvas.addEventListener("mousedown", () => {
+            isDrawing = true;
         });
-      }
+
+        canvas.addEventListener("mouseup", () => {
+            isDrawing = false;
+            ctx.beginPath();
+        });
+
+        canvas.addEventListener("mousemove", draw);
+
+        function draw(event) {
+            if (!isDrawing) return;
+            ctx.lineWidth = 10;
+            ctx.lineCap = "round";
+            ctx.strokeStyle = "black";
+            ctx.lineTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function predict() {
+            let resizedCanvas = document.createElement("canvas");
+            let resizedCtx = resizedCanvas.getContext("2d");
+            resizedCanvas.width = 28;
+            resizedCanvas.height = 28;
+            resizedCtx.drawImage(canvas, 0, 0, 28, 28);
+
+            let imageData = resizedCtx.getImageData(0, 0, 28, 28);
+            let data = [];
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                let avg = (imageData.data[i] + imageData.data[i + 1] + imageData.data[i + 2]) / 3;
+                data.push(avg);
+            }
+
+            if (data.length !== 784) {
+                console.error("Incorrect data size");
+                return;
+            }
+
+            $.ajax({
+                url: "/predict",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ image: data }),
+                success: function(response) {
+                    document.getElementById("result").innerText = "Predicted Character: " + response.prediction;
+                },
+                error: function(xhr, status, error) {
+                    console.error("Prediction error:", status, error);
+                }
+            });
+        }
     </script>
-  </body>
+</body>
 </html>
